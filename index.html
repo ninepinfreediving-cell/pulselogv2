@@ -67,8 +67,8 @@ function tab(t){S.tab=t;draw()}
 function setType(t){S.type=t;draw()}
 function draw(){
  $('#u').textContent=S.unit;
- $('#tabs').innerHTML=['Log','5/3/1','History','Stats'].map(t=>`<button class="${S.tab===t?'on':''}" onclick="tab('${t}')">${t}</button>`).join('');
- $('#v').innerHTML=S.tab==='Log'?logV():S.tab==='5/3/1'?wenV():S.tab==='History'?histV():statV();
+ $('#tabs').innerHTML=['Log','History','Stats'].map(t=>`<button class="${S.tab===t?'on':''}" onclick="tab('${t}')">${t}</button>`).join('');
+ $('#v').innerHTML=S.tab==='Log'?logV():S.tab==='History'?histV():statV();
 }
 function logV(){
  let h='<label>Workout type</label><select onchange="setType(this.value)">'+TYPES.map(t=>`<option ${S.type===t?'selected':''}>${t}</option>`).join('')+'</select>';
@@ -104,32 +104,6 @@ const GR=[['Bench press','Incline dumbbell press','Dumbbell press','Push-up','Ch
 function swapV(i){const n=S.draft[i].name,g=GR.find(a=>a.includes(n))||EX;
  return `<div style="margin-bottom:10px"><label>Swap with</label><div class="chips">${g.filter(x=>x!==n).map(x=>`<button class="chip" data-n="${x}" onclick="doSwap(${i},this.dataset.n)">${x}</button>`).join('')}</div><div class="row" style="margin:0"><input id="swn" list="exl" placeholder="Or type any exercise"><button class="btn g" style="flex:0 0 auto;width:auto" onclick="doSwap(${i},$('#swn').value)">Swap</button></div></div>`}
 function doSwap(i,n){n=(n||'').trim();if(!n)return;const c=S.draft[i].sets.length;S.draft[i]={name:n,sets:last(n)||Array.from({length:c},()=>({w:'',r:''}))};S.swap=-1;draw()}
-const LIFTS=['Squat','Bench press','Deadlift','Overhead press'],WP=[[.65,.75,.85],[.7,.8,.9],[.75,.85,.95],[.4,.5,.6]],WR=[[5,5,5],[3,3,3],[5,3,1],[5,5,5]];
-let P={tm:{'Squat':100,'Bench press':70,'Deadlift':120,'Overhead press':45},mode:'tm',week:1,scheme:'classic',supp:'bbb',warm:true,lift:'Squat'};
-try{Object.assign(P,JSON.parse(localStorage.getItem('pl_531')||'{}'))}catch(e){}
-const sp=()=>{try{localStorage.setItem('pl_531',JSON.stringify(P))}catch(e){}};
-const rnd=x=>Math.round(x/2.5)*2.5;
-const tmOf=l=>P.mode==='1rm'?P.tm[l]*.9:P.tm[l];
-function plan(l){const t=tmOf(l),wk=P.week-1,o={warm:[],main:[],supp:null};
- if(wk<3&&P.warm)o.warm=[[.4,5],[.5,5],[.6,3]].map(([p,r])=>({w:rnd(t*p),r}));
- o.main=WP[wk].map((p,i)=>({w:rnd(t*p),r:P.scheme==='pro'&&wk<3?5:WR[wk][i],a:wk<3&&i===2&&P.scheme==='classic'}));
- if(wk<3){if(P.supp==='bbb')o.supp={n:'BBB',s:5,r:10,w:rnd(t*.5)};if(P.supp==='fsl')o.supp={n:'FSL',s:5,r:5,w:rnd(t*WP[wk][0])};if(P.supp==='ssl')o.supp={n:'SSL',s:5,r:5,w:rnd(t*WP[wk][1])}}
- return o}
-function wenV(){const l=P.lift,pl=plan(l),pp=(w,r,a,m)=>`<tr${m?' class="mu"':''}><td>${w} kg</td><td>×${r}${a?'+':''}</td></tr>`;
- const opt=(a,v)=>a.map(x=>`<option value="${x[0]}" ${x[0]==v?'selected':''}>${x[1]}</option>`).join('');
- return `<div class="card"><div class="grid"><div><label>Lift</label><select onchange="P.lift=this.value;sp();draw()">${opt(LIFTS.map(x=>[x,x]),l)}</select></div><div><label>Week</label><select onchange="P.week=+this.value;sp();draw()">${opt([[1,'1 · 5s'],[2,'2 · 3s'],[3,'3 · 5/3/1'],[4,'4 · Deload']],P.week)}</select></div>
-<div><label>Main sets</label><select onchange="P.scheme=this.value;sp();draw()">${opt([['classic','Classic (AMRAP)'],['pro','5s PRO']],P.scheme)}</select></div><div><label>Supplemental</label><select onchange="P.supp=this.value;sp();draw()">${opt([['none','None'],['bbb','BBB 5×10 @50%'],['fsl','FSL 5×5'],['ssl','SSL 5×5']],P.supp)}</select></div></div>
-<label>Warm-ups</label><select style="margin:0" onchange="P.warm=this.value==='1';sp();draw()">${opt([['1','Include'],['0','Skip']],P.warm?'1':'0')}</select></div>
-<div class="card tb"><b>${l} · TM ${rnd(tmOf(l))} kg</b><table>${pl.warm.map(s=>pp(s.w,s.r,0,1)).join('')}${pl.main.map(s=>pp(s.w,s.r,s.a,0)).join('')}${pl.supp?`<tr><td>${pl.supp.w} kg</td><td>${pl.supp.n} ${pl.supp.s}×${pl.supp.r}</td></tr>`:''}</table></div>
-<button class="btn" onclick="startW()">Start this workout</button>
-<div class="card" style="margin-top:10px"><b>Training maxes</b><label style="margin-top:8px">Enter values as</label><select onchange="P.mode=this.value;sp();draw()">${opt([['tm','Training max'],['1rm','1RM (TM = 90%)']],P.mode)}</select><div class="grid">${LIFTS.map(x=>`<div><label>${x} (kg)</label><input type="number" inputmode="decimal" value="${P.tm[x]}" onchange="P.tm['${x}']=+this.value||0;sp();draw()"></div>`).join('')}</div>
-<div class="mu" style="margin:8px 0">After week 4: +2.5 kg upper body, +5 kg lower body.</div><button class="btn g" onclick="endCycle()">Complete cycle and progress</button></div>`}
-function startW(){if(S.draft.length&&!confirm('Replace your current workout?'))return;const l=P.lift,pl=plan(l);
- S.draft=[{name:l,sets:[...pl.warm,...pl.main].map(s=>({w:s.w,r:s.r}))}];
- if(pl.supp)S.draft.push({name:l+' ('+pl.supp.n+')',sets:Array.from({length:pl.supp.s},()=>({w:pl.supp.w,r:pl.supp.r}))});
- S.swap=-1;S.type='Strength';tab('Log')}
-function endCycle(){if(!confirm('Add 2.5 kg to upper lifts and 5 kg to lower lifts, and restart at week 1?'))return;
- LIFTS.forEach(x=>{const inc=(x==='Squat'||x==='Deadlift'?5:2.5)/(P.mode==='1rm'?.9:1);P.tm[x]=+(P.tm[x]+inc).toFixed(1)});P.week=1;sp();draw()}
 Object.assign(TPL,{'Full body A':['Squat','Bench press','Barbell row'],'Full body B':['Squat','Overhead press','Deadlift'],'Chest & back':['Bench press','Incline dumbbell press','Pull-up','Barbell row','Chest fly'],'Arms & shoulders':['Overhead press','Lateral raise','Bicep curl','Hammer curl','Tricep pushdown']});
 const PG={'Splits':['Push','Pull','Legs','Upper','Lower','Chest & back','Arms & shoulders'],'Full body':['Full body','Full body A','Full body B']};
 function tplV2(){return `<label>Preset workout</label><select onchange="loadP(this.value)"><option value="">Choose a preset…</option>${Object.entries(PG).map(([g,a])=>`<optgroup label="${g}">${a.map(k=>`<option>${esc(k)}</option>`).join('')}</optgroup>`).join('')}</select>`}
